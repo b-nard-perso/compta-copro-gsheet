@@ -185,7 +185,7 @@ def _appliquer_formatage_entete(
     sh.batch_update({"requests": requetes})
 
 
-def _appliquer_format_monnetaire(
+def _appliquer_format_monetaire(
     sh: gspread.Spreadsheet,
     ws: gspread.Worksheet,
     indices_colonnes: list[int],
@@ -268,7 +268,7 @@ def _ecrire_onglet_annee(
     ws.update("A1", lignes)
 
     _appliquer_formatage_entete(sh, ws, len(agg.columns))
-    _appliquer_format_monnetaire(sh, ws, [1, 2, 3], len(agg))
+    _appliquer_format_monetaire(sh, ws, [1, 2, 3], len(agg))
     print(f"  📊 Onglet '{nom_onglet}' écrit ({len(agg) - 1} postes + total)")
 
 
@@ -310,7 +310,7 @@ def _ecrire_onglet_comparaison(
 
     # Colonnes monétaires
     cols_eur = [i for i, c in enumerate(df_affichage.columns) if "(€)" in c]
-    _appliquer_format_monnetaire(sh, ws, cols_eur, len(df_affichage))
+    _appliquer_format_monetaire(sh, ws, cols_eur, len(df_affichage))
 
     print(f"  📊 Onglet 'Comparaison' écrit ({len(df_affichage)} lignes)")
 

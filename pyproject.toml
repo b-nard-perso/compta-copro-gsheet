@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "compta-copro"
+version = "0.1.0"
+description = "Analyse des dépenses de copropriété : import CSV, agrégations, génération Google Sheets"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+keywords = ["copropriété", "comptabilité", "google-sheets", "csv"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Natural Language :: French",
+]
+
+dependencies = [
+    "pandas>=2.0",
+    "pyarrow>=14.0",        # Backend Parquet pour pandas
+    "python-dotenv>=1.0",
+    "gspread>=6.0",
+    "google-auth>=2.0",
+    "google-auth-oauthlib>=1.0",
+    "google-api-python-client>=2.0",
+]
+
+[project.optional-dependencies]
+pdf = [
+    "pdfplumber>=0.10",
+    "pypdf>=4.0",
+]
+ocr = [
+    "pytesseract>=0.3",
+    "pdf2image>=1.16",
+    "Pillow>=10.0",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+]
+
+[project.scripts]
+compta-copro = "compta_copro.cli:principale"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["compta_copro*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v"
+
+[tool.coverage.run]
+source = ["compta_copro"]
+omit = ["tests/*"]

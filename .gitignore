@@ -1,0 +1,73 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+.eggs/
+*.whl
+.installed.cfg
+
+# Environnements virtuels
+.venv/
+venv/
+env/
+ENV/
+.env
+
+# Mais conserver .env.example
+!.env.example
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Données sensibles / credentials Google
+credentials/
+!credentials/.gitkeep
+
+# Données CSV réelles (ne pas pousser dans le repo)
+data/csv/
+!data/csv/.gitkeep
+data/intermediaire/
+!data/intermediaire/.gitkeep
+data/sorties/
+!data/sorties/.gitkeep
+data/pdf/
+!data/pdf/.gitkeep
+
+# Fichiers Parquet / sorties intermédiaires
+*.parquet
+
+# Couverture de tests
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Distribution / packaging
+MANIFEST

@@ -10,6 +10,7 @@ et ce projet respecte [Semantic Versioning](https://semver.org/lang/fr/).
 ## [0.1.0] — 2025-04-05
 
 ### Ajouté
+
 - Initialisation du projet Python entièrement en français.
 - Module `compta_copro/importation/lecteur_csv.py` :
   - Import de fichiers CSV (un par année, nommés `AAAA.csv`).

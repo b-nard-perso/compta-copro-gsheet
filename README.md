@@ -1,8 +1,7 @@
 # compta-copro-gsheet — Analyse des dépenses de copropriété
 
-> Outil Python pour importer les relevés CSV du syndic, calculer les variations
-> annuelles et générer automatiquement un **Google Sheet** partageable avec les
-> membres du conseil syndical.
+> Outil Python pour importer les releves CSV du syndic, calculer les variations
+> annuelles et generer un **classeur Excel (.xlsx)** facilement partageable.
 
 [![Licence MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
@@ -14,7 +13,7 @@
 1. [Fonctionnalités](#fonctionnalités)
 2. [Prérequis](#prérequis)
 3. [Installation](#installation)
-4. [Configuration Google API (pas-à-pas)](#configuration-google-api-pas-à-pas)
+4. [Option Google Sheets (facultatif)](#option-google-sheets-facultatif)
 5. [Utilisation](#utilisation)
 6. [Structure du projet](#structure-du-projet)
 7. [Format des fichiers CSV](#format-des-fichiers-csv)
@@ -28,10 +27,11 @@
 - 📥 **Import CSV** — lit les exports du syndic (encodage Windows-1252/latin-1/utf-8-sig, séparateur `;`, décimales `,`).
 - 🔄 **Fusion pluri-annuelle** — concatène les fichiers par année et normalise le schéma.
 - 📊 **Agrégations** — total par poste et par année, comparaison N vs N-1, top 20 hausses.
-- 📋 **Google Sheet** — crée ou met à jour automatiquement un tableur partageable avec :
+- 📘 **Export Excel (.xlsx)** — produit un classeur prêt à copier-coller/importer avec :
   - un onglet par année (dépenses par TYPE DE CHARGE + totaux),
   - un onglet **Comparaison** (delta en € et en %),
   - un onglet **Synthèse** (top hausses).
+- 📋 **Google Sheet (optionnel)** — disponible via extra d'installation dédié.
 - 📄 **PDF** *(expérimental)* — extraction de texte depuis des PDF numériques ou scannés (OCR Tesseract).
 
 ---
@@ -39,7 +39,6 @@
 ## Prérequis
 
 - **Python 3.10 ou supérieur**
-- Un compte Google (pour créer le Google Sheet)
 
 ---
 
@@ -62,6 +61,9 @@ source .venv/bin/activate
 # 3. Installer le projet
 pip install -e .
 
+# Optionnel : support Google Sheets
+pip install -e ".[gsheet]"
+
 # Avec le support PDF (optionnel)
 pip install -e ".[pdf]"
 
@@ -74,10 +76,10 @@ pip install -e ".[dev]"
 
 ---
 
-## Configuration Google API (pas-à-pas)
+## Option Google Sheets (facultatif)
 
-> Cette étape est nécessaire une seule fois. Elle permet au script de créer et
-> modifier des fichiers Google Sheets en votre nom.
+Cette section n'est utile que si vous souhaitez utiliser la commande `generer-gsheet`.
+Le flux recommande par defaut est `generer-xlsx` (sans API Google).
 
 ### Étape 1 — Créer un projet Google Cloud
 
@@ -90,6 +92,7 @@ pip install -e ".[dev]"
 Dans le menu de gauche : **APIs et services** → **Bibliothèque**.
 
 Recherchez et activez les deux APIs suivantes :
+
 - **Google Sheets API**
 - **Google Drive API**
 
@@ -119,13 +122,6 @@ redemanderont pas l'autorisation.
 
 ## Utilisation
 
-### Configurer les variables d'environnement
-
-```bash
-cp .env.example .env
-# Éditez .env pour renseigner le nom de votre Google Sheet
-```
-
 ### Étape 1 — Importer les CSV
 
 Placez vos fichiers CSV dans le dossier `data/csv/` en les nommant par année
@@ -150,12 +146,35 @@ python -m compta_copro analyser \
 ```
 
 Les fichiers CSV suivants sont produits dans `data/sorties/` :
+
 - `agregation_annee_poste.csv` — total par (année, poste)
 - `comparaison_n_n1.csv` — delta N vs N-1
 - `top_hausses_eur.csv` — top 20 hausses en €
 - `top_hausses_pct.csv` — top 20 hausses en %
 
-### Étape 3 — Générer le Google Sheet
+### Étape 3 — Générer le classeur Excel (.xlsx)
+
+```bash
+python -m compta_copro generer-xlsx \
+  --input data/intermediaire/depenses.parquet \
+  --sortie data/sorties/rapport_copro_2025.xlsx
+```
+
+Pour un usage "annee courante uniquement" (recommande si les annees passees
+sont deja dans votre fichier partage) :
+
+```bash
+python -m compta_copro generer-xlsx \
+  --input data/intermediaire/depenses.parquet \
+  --sortie data/sorties/rapport_copro_2025.xlsx \
+  --annee-courante
+```
+
+Le fichier `.xlsx` contient un onglet par annee, un onglet de comparaison et un
+onglet de synthese. Avec `--annee-courante`, seul l'onglet de l'annee la plus
+recente est genere, et la comparaison reste limitee a N vs N-1.
+
+### Étape 4 (optionnelle) — Générer le Google Sheet
 
 ```bash
 python -m compta_copro generer-gsheet \
@@ -172,6 +191,7 @@ le partager avec les membres du conseil syndical via Google Drive.
 python -m compta_copro --help
 python -m compta_copro importer-csv --help
 python -m compta_copro analyser --help
+python -m compta_copro generer-xlsx --help
 python -m compta_copro generer-gsheet --help
 python -m compta_copro extraire-pdf --help
 ```
@@ -180,7 +200,7 @@ python -m compta_copro extraire-pdf --help
 
 ## Structure du projet
 
-```
+```text
 compta-copro-gsheet/
 ├── compta_copro/               # Package Python principal
 │   ├── __init__.py
@@ -190,6 +210,8 @@ compta-copro-gsheet/
 │   │   └── lecteur_csv.py      # Import et normalisation des CSV
 │   ├── analyse/
 │   │   └── agregation.py       # Agrégations et comparaisons inter-annuelles
+│   ├── xlsx/
+│   │   └── generateur.py       # Génération du classeur Excel (.xlsx)
 │   ├── gsheet/
 │   │   ├── auth.py             # Authentification OAuth Google
 │   │   └── generateur.py       # Génération du Google Sheet
@@ -197,7 +219,8 @@ compta-copro-gsheet/
 │       └── extract_texte.py    # Extraction de texte PDF (expérimental)
 ├── tests/                      # Tests pytest
 │   ├── test_importation.py
-│   └── test_analyse.py
+│   ├── test_analyse.py
+│   └── test_xlsx.py
 ├── examples/                   # Exemples CSV anonymisés
 │   ├── 2024.csv
 │   └── 2025.csv
@@ -223,7 +246,7 @@ compta-copro-gsheet/
 Les fichiers CSV attendus ont le format exporté par les logiciels de syndic
 (séparateur `;`, encodage Windows-1252 ou UTF-8, décimales `,`) :
 
-```
+```csv
 DATE;CLE DE REPARTITION;TYPE DE CHARGE;LIBELLE;A REPARTIR;TVA;RECUPERABLE
 18/03/2025;001 - CHARGES GENERALES;100 - CONTRAT D'ENTRETIEN R;ENTREPRISE A - ENTRETIEN 2025;"650,47";"59,13";"650,47"
 ```
@@ -253,6 +276,7 @@ python -m compta_copro extraire-pdf data/pdf/facture_scan.pdf --ocr --sortie dat
 ```
 
 Pour l'OCR, installez Tesseract sur votre système :
+
 - **Windows** : [https://github.com/UB-Mannheim/tesseract/wiki](https://github.com/UB-Mannheim/tesseract/wiki)
   (cochez le pack langue "French" lors de l'installation)
 - **macOS** : `brew install tesseract tesseract-lang`

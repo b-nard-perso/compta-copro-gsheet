@@ -2,10 +2,12 @@
 Interface en ligne de commande (CLI) de compta_copro.
 
 Sous-commandes :
-    importer-csv      Importer les CSV d'un dossier vers un fichier Parquet/CSV
-    analyser          Calculer les agrégations et produire des CSV de synthèse
-    generer-gsheet    Créer ou mettre à jour le Google Sheet
-    extraire-pdf      Extraire le texte d'un fichier PDF
+    importer-csv           Importer les CSV d'un dossier vers un fichier Parquet/CSV
+    analyser               Calculer les agrégations et produire des CSV de synthèse
+    generer-xlsx           Produire un classeur Excel (.xlsx) de synthèse
+    generer-xlsx-courant   Raccourci : export de l'année courante uniquement
+    generer-gsheet         Créer ou mettre à jour le Google Sheet
+    extraire-pdf           Extraire le texte d'un fichier PDF
 """
 
 import argparse
@@ -15,6 +17,22 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
+def _charger_dataframe(entree: Path):
+    """Charger un DataFrame depuis un fichier .parquet ou .csv normalisé."""
+    import pandas as pd
+
+    if entree.suffix == ".parquet":
+        return pd.read_parquet(entree)
+
+    df = pd.read_csv(entree, sep=";", encoding="utf-8-sig")
+    df["date"] = pd.to_datetime(df["date"], dayfirst=True)
+    df["a_repartir"] = df["a_repartir"].astype(float)
+    df["tva"] = df["tva"].astype(float)
+    df["recuperable"] = df["recuperable"].astype(float)
+    df["annee"] = df["annee"].astype(int)
+    return df
 
 
 def _commande_importer_csv(args: argparse.Namespace) -> None:
@@ -33,8 +51,6 @@ def _commande_importer_csv(args: argparse.Namespace) -> None:
 
 
 def _commande_analyser(args: argparse.Namespace) -> None:
-    import pandas as pd
-
     from compta_copro.analyse.agregation import (
         agregation_annee_poste,
         comparaison_n_n1,
@@ -42,15 +58,7 @@ def _commande_analyser(args: argparse.Namespace) -> None:
     )
 
     entree = Path(args.input)
-    if entree.suffix == ".parquet":
-        df = pd.read_parquet(entree)
-    else:
-        df = pd.read_csv(entree, sep=";", encoding="utf-8-sig")
-        df["date"] = pd.to_datetime(df["date"], dayfirst=True)
-        df["a_repartir"] = df["a_repartir"].astype(float)
-        df["tva"] = df["tva"].astype(float)
-        df["recuperable"] = df["recuperable"].astype(float)
-        df["annee"] = df["annee"].astype(int)
+    df = _charger_dataframe(entree)
 
     sortie = Path(args.output)
     sortie.mkdir(parents=True, exist_ok=True)
@@ -72,25 +80,42 @@ def _commande_analyser(args: argparse.Namespace) -> None:
 def _commande_generer_gsheet(args: argparse.Namespace) -> None:
     import os
 
-    import pandas as pd
-
-    from compta_copro.gsheet.generateur import generer_google_sheet
+    try:
+        from compta_copro.gsheet.generateur import generer_google_sheet
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            "La commande generer-gsheet requiert les dependances optionnelles Google. "
+            "Installez avec: pip install -e .[gsheet]"
+        ) from exc
 
     entree = Path(args.input)
-    if entree.suffix == ".parquet":
-        df = pd.read_parquet(entree)
-    else:
-        df = pd.read_csv(entree, sep=";", encoding="utf-8-sig")
-        df["date"] = pd.to_datetime(df["date"], dayfirst=True)
-        df["a_repartir"] = df["a_repartir"].astype(float)
-        df["tva"] = df["tva"].astype(float)
-        df["recuperable"] = df["recuperable"].astype(float)
-        df["annee"] = df["annee"].astype(int)
+    df = _charger_dataframe(entree)
 
     nom_sheet = args.spreadsheet or os.getenv("GSHEET_NOM", "Copro - Analyse")
     dossier_credentials = Path(args.credentials)
 
     generer_google_sheet(df, nom_sheet=nom_sheet, dossier_credentials=dossier_credentials)
+
+
+def _commande_generer_xlsx(args: argparse.Namespace) -> None:
+    from compta_copro.xlsx.generateur import generer_classeur_excel
+
+    entree = Path(args.input)
+    df = _charger_dataframe(entree)
+    annee_cible = int(df["annee"].max()) if args.annee_courante else None
+
+    sortie = Path(args.sortie)
+    if sortie.suffix.lower() != ".xlsx":
+        raise ValueError("Le fichier de sortie doit avoir l'extension .xlsx")
+
+    chemin = generer_classeur_excel(df, sortie, annee_cible=annee_cible)
+    print(f"✅  Classeur Excel genere → {chemin}")
+
+
+def _commande_generer_xlsx_courant(args: argparse.Namespace) -> None:
+    """Raccourci : force le mode annee courante puis delègue à generer-xlsx."""
+    args.annee_courante = True
+    _commande_generer_xlsx(args)
 
 
 def _commande_extraire_pdf(args: argparse.Namespace) -> None:
@@ -152,9 +177,50 @@ def principale() -> None:
     )
 
     # --- generer-gsheet ---
+    p_xlsx = sous_commandes.add_parser(
+        "generer-xlsx",
+        help="Generer un classeur Excel (.xlsx) contenant les analyses",
+    )
+    p_xlsx.add_argument(
+        "--input",
+        default="data/intermediaire/depenses.parquet",
+        metavar="FICHIER",
+        help="Fichier source (.parquet ou .csv) (defaut : data/intermediaire/depenses.parquet)",
+    )
+    p_xlsx.add_argument(
+        "--sortie",
+        default="data/sorties/rapport_copro.xlsx",
+        metavar="FICHIER",
+        help="Fichier Excel de sortie (.xlsx) (defaut : data/sorties/rapport_copro.xlsx)",
+    )
+    p_xlsx.add_argument(
+        "--annee-courante",
+        action="store_true",
+        help="Exporter uniquement l'annee la plus recente des donnees (avec comparaison N vs N-1)",
+    )
+
+    # --- generer-xlsx-courant ---
+    p_xlsx_c = sous_commandes.add_parser(
+        "generer-xlsx-courant",
+        help="Raccourci : exporter uniquement l'annee la plus recente (sans --annee-courante a taper)",
+    )
+    p_xlsx_c.add_argument(
+        "--input",
+        default="data/intermediaire/depenses.parquet",
+        metavar="FICHIER",
+        help="Fichier source (.parquet ou .csv) (defaut : data/intermediaire/depenses.parquet)",
+    )
+    p_xlsx_c.add_argument(
+        "--sortie",
+        default="data/sorties/rapport_copro.xlsx",
+        metavar="FICHIER",
+        help="Fichier Excel de sortie (.xlsx) (defaut : data/sorties/rapport_copro.xlsx)",
+    )
+
+    # --- generer-gsheet ---
     p_gsheet = sous_commandes.add_parser(
         "generer-gsheet",
-        help="Créer ou mettre à jour le Google Sheet",
+        help="Creer ou mettre a jour le Google Sheet (optionnel)",
     )
     p_gsheet.add_argument(
         "--input",
@@ -198,6 +264,8 @@ def principale() -> None:
     commandes = {
         "importer-csv": _commande_importer_csv,
         "analyser": _commande_analyser,
+        "generer-xlsx": _commande_generer_xlsx,
+        "generer-xlsx-courant": _commande_generer_xlsx_courant,
         "generer-gsheet": _commande_generer_gsheet,
         "extraire-pdf": _commande_extraire_pdf,
     }

@@ -21,6 +21,7 @@ import re
 from pathlib import Path
 
 import pandas as pd
+from typing import cast
 
 # Encodages à essayer dans l'ordre pour chaque fichier CSV
 _ENCODAGES = ["utf-8-sig", "cp1252", "latin-1", "utf-8"]
@@ -51,7 +52,7 @@ def _lire_csv(chemin: Path) -> pd.DataFrame:
             )
             # Supprimer les éventuelles colonnes "Unnamed"
             df = df.loc[:, ~df.columns.str.startswith("Unnamed")]
-            return df
+            return cast(pd.DataFrame, df)
         except (UnicodeDecodeError, pd.errors.ParserError) as exc:
             derniere_erreur = exc
             continue
@@ -99,7 +100,7 @@ def _normaliser(df: pd.DataFrame, annee: int) -> pd.DataFrame:
             f"Colonnes manquantes dans le fichier de l'année {annee} : {colonnes_manquantes}"
         )
 
-    df = df.rename(columns=_RENOMMAGE)[list(_RENOMMAGE.values())].copy()
+    df = cast(pd.DataFrame, df.rename(columns=_RENOMMAGE)[list(_RENOMMAGE.values())].copy())
 
     # Parsing des dates
     df["date"] = pd.to_datetime(df["date"].str.strip(), format="%d/%m/%Y", dayfirst=True)

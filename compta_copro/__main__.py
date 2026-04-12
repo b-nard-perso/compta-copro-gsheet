@@ -7,6 +7,7 @@ Utilisation :
 Commandes disponibles :
     importer-csv      Importer les CSV d'un dossier
     analyser          Calculer les agrégations et comparaisons
+    generer-xlsx      Produire un classeur Excel (.xlsx)
     generer-gsheet    Créer ou mettre à jour le Google Sheet
     extraire-pdf      Extraire le texte d'un fichier PDF (expérimental)
 """

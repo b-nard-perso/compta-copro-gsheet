@@ -5,11 +5,11 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "compta-copro"
 version = "0.1.0"
-description = "Analyse des dépenses de copropriété : import CSV, agrégations, génération Google Sheets"
+description = "Analyse des depenses de copropriete : import CSV, agregations, export Excel et Google Sheets optionnel"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
-keywords = ["copropriété", "comptabilité", "google-sheets", "csv"]
+keywords = ["copropriete", "comptabilite", "xlsx", "csv"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -21,13 +21,16 @@ dependencies = [
     "pandas>=2.0",
     "pyarrow>=14.0",        # Backend Parquet pour pandas
     "python-dotenv>=1.0",
+    "openpyxl>=3.1",
+]
+
+[project.optional-dependencies]
+gsheet = [
     "gspread>=6.0",
     "google-auth>=2.0",
     "google-auth-oauthlib>=1.0",
     "google-api-python-client>=2.0",
 ]
-
-[project.optional-dependencies]
 pdf = [
     "pdfplumber>=0.10",
     "pypdf>=4.0",
